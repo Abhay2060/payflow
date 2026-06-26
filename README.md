@@ -29,33 +29,32 @@ Built as a learning project with **raw SQL** (no ORM) to understand Postgres dir
 
 ```mermaid
 flowchart TD
-    Customer([Customer]) -->|pays| Checkout[Checkout Page]
+    Customer(Customer) -->|pays| Checkout[Checkout Page]
 
-    subgraph Merchant["Merchant Side — separate server"]
-        Checkout[Checkout Page] --> MerchBackend[Merchant Backend]
+    subgraph Merchant["Merchant Side - separate server"]
+        Checkout --> MerchBackend[Merchant Backend]
     end
 
-    MerchBackend -->|API key + X-Merchant-ID| AuthMW[Auth Middleware]
+    MerchBackend -->|API key plus Merchant ID| AuthMW[Auth Middleware]
 
-    subgraph Gateway["Payment Gateway — this repo"]
-        AuthMW[Auth Middleware] --> PaymentSvc[Payment Service]
-        PaymentSvc --> Redis[(Redis<br/>Idempotency Cache)]
-        PaymentSvc --> Processor[Mock Processor<br/>~80% success]
-        PaymentSvc --> Postgres[(PostgreSQL<br/>intents/transactions/refunds)]
-        Processor --> EventLog[Event Log<br/>append-only audit]
+    subgraph Gateway["Payment Gateway - this repo"]
+        AuthMW --> PaymentSvc[Payment Service]
+        PaymentSvc --> RedisCache[Redis Idempotency Cache]
+        PaymentSvc --> Processor[Mock Processor]
+        PaymentSvc --> Postgres[PostgreSQL Database]
+        Processor --> EventLog[Event Log Audit Trail]
         Processor --> Queue[BullMQ Queue]
         Queue --> Worker[Webhook Worker]
-        Dashboard[Merchant Dashboard<br/>React, JWT only] -.->|reads| Postgres
+        Dashboard[Merchant Dashboard] -.-> Postgres
     end
 
-    Worker -->|signed webhook POST| MerchBackend
+    Worker -->|signed webhook| MerchBackend
 
     subgraph Banking["Where a real bank plugs in"]
-        direction LR
-        RealProcessor[Razorpay / Stripe] --> Network[Visa / Mastercard / NPCI]
+        RealProcessor[Razorpay or Stripe] --> Network[Card Network]
         Network --> Issuing[Issuing Bank]
         Issuing --> Acquiring[Acquiring Bank]
-        Acquiring --> Settlement[Settlement T+1/T+2]
+        Acquiring --> Settlement[Settlement]
     end
 
     Processor -.->|replaced by| RealProcessor
