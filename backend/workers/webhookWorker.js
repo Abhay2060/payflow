@@ -146,3 +146,21 @@ worker.on("error", (err) => {
 });
 
 console.log("Webhook worker started — listening for jobs...");
+
+const shutdown = async (signal) => {
+  console.log(`${signal} received. Shutting down worker...`);
+
+  try {
+    await worker.close();
+    await pool.end();
+
+    console.log("Worker and database pool closed.");
+    process.exit(0);
+  } catch (error) {
+    console.error("Shutdown failed:", error);
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
